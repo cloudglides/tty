@@ -1,0 +1,5 @@
+{
+  "name": "hello",
+  "summary": "a minimal wasi tui example",
+  "wasm": "hello.wasm"
+}

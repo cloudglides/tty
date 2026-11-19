@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { WebSocketServer } from "ws";
 import { CHAT_PATH, MAX_MESSAGE_LENGTH, sanitize } from "../src/lib/chat-shared.mjs";
 import { SESSION_COOKIE, verifySession } from "../src/lib/session-token.mjs";
+import { sameOrigin } from "./http.mjs";
 import { createSlackBridge } from "./slack.mjs";
 
 const MAX_CONNECTIONS = 500;
@@ -24,18 +25,6 @@ function cookie(header, name) {
     }
   }
   return null;
-}
-
-function sameOrigin(req) {
-  const origin = req.headers.origin;
-  if (!origin) return false;
-  try {
-    const { host } = new URL(origin);
-    const allowed = [req.headers.host, process.env.APP_URL && new URL(process.env.APP_URL).host];
-    return allowed.includes(host);
-  } catch {
-    return false;
-  }
 }
 
 export function createChat() {

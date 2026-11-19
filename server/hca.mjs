@@ -9,11 +9,11 @@ export function hcaConfig() {
   return { clientId, clientSecret };
 }
 
-export function redirectUri(origin: string) {
+export function redirectUri(origin) {
   return `${process.env.APP_URL ?? origin}/api/auth/callback`;
 }
 
-export async function exchangeCode(code: string, redirect: string): Promise<string> {
+export async function exchangeCode(code, redirect) {
   const { clientId, clientSecret } = hcaConfig();
   const res = await fetch(`${HCA}/oauth/token`, {
     method: "POST",
@@ -28,14 +28,12 @@ export async function exchangeCode(code: string, redirect: string): Promise<stri
     signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) throw new Error(`token exchange failed (${res.status})`);
-  const data = (await res.json()) as { access_token?: string };
+  const data = await res.json();
   if (!data.access_token) throw new Error("token exchange returned no access token");
   return data.access_token;
 }
 
-export type UserInfo = { sub: string; slack_id?: string; nickname?: string; name?: string };
-
-export async function userInfo(accessToken: string): Promise<UserInfo> {
+export async function userInfo(accessToken) {
   const res = await fetch(`${HCA}/oauth/userinfo`, {
     headers: { Authorization: `Bearer ${accessToken}` },
     signal: AbortSignal.timeout(10_000),
@@ -44,13 +42,13 @@ export async function userInfo(accessToken: string): Promise<UserInfo> {
   return res.json();
 }
 
-export async function slackDisplayName(slackId: string): Promise<string | null> {
+export async function slackDisplayName(slackId) {
   try {
     const res = await fetch(`https://cachet.dunkirk.sh/users/${encodeURIComponent(slackId)}`, {
       signal: AbortSignal.timeout(5_000),
     });
     if (!res.ok) return null;
-    const data = (await res.json()) as { displayName?: string; realName?: string };
+    const data = await res.json();
     return data.displayName || data.realName || null;
   } catch {
     return null;

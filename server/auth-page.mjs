@@ -1,9 +1,9 @@
 const C = { bg: "#161617", fg: "#c9c7cd", green: "#90b99f", red: "#f5a191", dim: "#424246" };
 
-const escape = (s: string) =>
-  s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+const escape = (s) =>
+  s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
-export function authPage(title: string, detail: string, ok: boolean) {
+export function authPage(title, detail, ok) {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>tty: ${escape(title)}</title>

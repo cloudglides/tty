@@ -1,7 +1,4 @@
-import { JetBrains_Mono } from "next/font/google";
-
-const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "700"] });
-export const FONT_FAMILY = `"Berkeley Mono", ${mono.style.fontFamily}`;
+export const FONT_FAMILY = '"Berkeley Mono", "JetBrains Mono", "JetBrains Mono Fallback"';
 export const FONT_SIZE = 16.5;
 
 export const MELLOW = {

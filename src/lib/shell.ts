@@ -5,6 +5,13 @@ export interface TermLike {
   write(data: string): void;
   clear(): void;
   readonly cols: number;
+  readonly rows: number;
+}
+
+export interface PassthroughMode {
+  onData(data: string): void;
+  onResize?(cols: number, rows: number): void;
+  exit(): void;
 }
 
 export type Ctx = { shell: Shell; signal: AbortSignal };
@@ -36,6 +43,7 @@ export class Shell {
   private pendingRead: { prompt: string; resolve: (line: string | null) => void } | null = null;
   private typeahead: string[] = [];
   private mode: Mode | null = null;
+  private passthrough: PassthroughMode | null = null;
 
   private commands = new Map<string, Command>();
   private aliases = new Map<string, string[]>();
@@ -68,6 +76,10 @@ export class Shell {
     return this.term.cols;
   }
 
+  get rows() {
+    return this.term.rows;
+  }
+
   register(command: Command) {
     this.commands.set(command.name, command);
   }
@@ -83,6 +95,8 @@ export class Shell {
   dispose() {
     this.abort?.abort();
     this.mode?.exit();
+    this.passthrough?.exit();
+    this.passthrough = null;
   }
 
   write(data: string) {
@@ -94,6 +108,7 @@ export class Shell {
   }
 
   printAbove(s: string) {
+    if (this.passthrough) return;
     if (this.busy && !this.pendingRead) return this.println(s);
     this.eraseInput();
     this.println(s);
@@ -151,7 +166,30 @@ export class Shell {
     else if (!this.busy) this.render();
   }
 
+  enterPassthrough(mode: PassthroughMode) {
+    this.passthrough = mode;
+    this.line = "";
+    this.cursor = 0;
+    this.drawnPos = 0;
+    this.eraseInput();
+  }
+
+  exitPassthrough() {
+    if (!this.passthrough) return;
+    this.passthrough = null;
+    this.drawnPos = 0;
+    this.render();
+  }
+
+  resize(cols: number, rows: number) {
+    this.passthrough?.onResize?.(cols, rows);
+  }
+
   handleInput(data: string) {
+    if (this.passthrough) {
+      this.passthrough.onData(data);
+      return;
+    }
     if (this.busy && !this.pendingRead) {
       if (data === "\x03") {
         this.typeahead = [];
@@ -316,7 +354,7 @@ export class Shell {
       this.busy = false;
       this.abort = null;
       this.drawnPos = 0;
-      this.render();
+      if (!this.passthrough) this.render();
       this.replayTypeahead();
     }
   }
