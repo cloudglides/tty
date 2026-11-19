@@ -73,15 +73,24 @@ async function serveStatic(req, res, pathname) {
   }
 
   const ext = path.extname(filePath).toLowerCase();
+  const etag = `W/"${stat.size.toString(16)}-${stat.mtimeMs.toString(16)}"`;
   const headers = {
     "content-type": TYPES[ext] ?? "application/octet-stream",
     "content-length": encoding ? statSync(file).size : stat.size,
-    "cache-control": dev ? "no-store" : file.endsWith("index.html") ? "no-cache" : "public, max-age=31536000, immutable",
-    etag: `W/"${stat.size.toString(16)}-${stat.mtimeMs.toString(16)}"`,
+    "cache-control": dev
+      ? "no-store"
+      : /\.(html|js|wasm)$/.test(filePath)
+        ? "no-cache"
+        : "public, max-age=31536000, immutable",
+    etag,
   };
   if (encoding) {
     headers["content-encoding"] = encoding;
     headers.vary = "Accept-Encoding";
+  }
+  if (req.headers["if-none-match"] === etag) {
+    res.writeHead(304, { etag, "cache-control": headers["cache-control"], vary: headers.vary });
+    return res.end();
   }
   res.writeHead(200, headers);
   if (req.method === "HEAD") return res.end();

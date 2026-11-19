@@ -1,6 +1,6 @@
 import type { Terminal } from "ghostty-web";
 
-export function attachTouchScroll(term: Terminal) {
+export function attachTouchScroll(term: Terminal, enabled: () => boolean = () => true) {
   const element = term.element;
   if (!element) return () => {};
 
@@ -9,7 +9,7 @@ export function attachTouchScroll(term: Terminal) {
   let rowHeight = 20;
 
   const onStart = (e: TouchEvent) => {
-    if (e.touches.length !== 1) {
+    if (e.touches.length !== 1 || !enabled()) {
       dragging = false;
       return;
     }
@@ -20,7 +20,7 @@ export function attachTouchScroll(term: Terminal) {
   };
 
   const onMove = (e: TouchEvent) => {
-    if (!dragging || e.touches.length !== 1 || term.getScrollbackLength() === 0) return;
+    if (!dragging || e.touches.length !== 1 || !enabled() || term.getScrollbackLength() === 0) return;
     const y = e.touches[0].clientY;
     const dy = y - lastY;
     lastY = y;

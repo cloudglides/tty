@@ -72,6 +72,10 @@ export class Shell {
     });
   }
 
+  get inPassthrough() {
+    return this.passthrough !== null;
+  }
+
   get cols() {
     return this.term.cols;
   }

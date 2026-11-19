@@ -89,7 +89,7 @@ async function boot() {
     const sub = term.onData((data: string) => shell.handleInput(data));
     const resize = term.onResize(({ cols, rows }) => shell.resize(cols, rows));
     const detachKeyboard = term.textarea ? attachSoftKeyboard(term.textarea, (data) => shell.handleInput(data)) : () => {};
-    const detachTouchScroll = attachTouchScroll(term);
+    const detachTouchScroll = attachTouchScroll(term, () => !shell.inPassthrough);
     const detachViewport = trackVisualViewport();
     shell.start();
     term.focus();
