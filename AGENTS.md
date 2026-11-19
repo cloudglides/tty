@@ -49,6 +49,7 @@ src/lib/shell.ts              the shell: line editor, history, command dispatch,
 src/lib/features/*.ts         one file per command (auth, chat, prizes, rsvp)
 src/lib/soft-keyboard.ts      mobile keyboard input that ghostty-web drops
 src/lib/touch-scroll.ts       mobile touch-drag scrollback for the terminal
+src/lib/touch-exit.ts         double-tap/two-finger exit from fullscreen TUIs
 src/lib/ansi.ts               SGR colours, OSC 8 links, error/warning helpers
 src/lib/ansi-image.ts         renders PNGs as truecolor half-block characters
 src/lib/session-token.mjs     HMAC session sign/verify, shared by client-neutral libs and server/
@@ -83,7 +84,8 @@ Anything that needs the server goes through a route handler in `server.mjs` and 
 ### Running TUIs
 
 - Contributed TUIs live in `tuis/<name>/` and run in a Web Worker with a fixed WASI-style ABI. The server only serves their `.wasm` files as static assets. See `tuis/README.md` for the manifest format, ABI and limits.
-- `Shell.enterPassthrough` hands raw keys and resize events to a fullscreen TUI and suppresses the prompt; `exitPassthrough` restores it. Both `btop` and WASM TUIs use this.
+- `Shell.enterPassthrough` hands raw keys and resize events to a fullscreen TUI and suppresses the prompt; `exitPassthrough` restores it. Both `btop` and WASM TUIs use this. A mode can set `minCols`; on narrow screens the shell temporarily shrinks the terminal font so the TUI gets enough columns, then restores it on exit.
+- On touch screens, a double-tap or two-finger tap exits any fullscreen TUI (it sends ctrl-c). The wrapper uses `touch-action: manipulation` so the gesture does not trigger browser zoom.
 - `btop` is the only native lane: `server/pty.mjs` spawns the vendored static binary with fixed argv, caps sessions and lifetime, and kills the process group on disconnect. Never interpolate user input into the command line. Adding another native binary requires a reviewed code change, not just a file in `tuis/`.
 
 ## Auth and identity

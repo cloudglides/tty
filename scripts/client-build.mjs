@@ -30,8 +30,8 @@ const css = `@font-face{font-family:"JetBrains Mono";font-style:normal;font-weig
 @font-face{font-family:"JetBrains Mono Fallback";src:local(Arial);ascent-override:75.79%;descent-override:22.29%;line-gap-override:0%;size-adjust:134.59%}
 *,:before,:after{box-sizing:border-box;border:0 solid;margin:0;padding:0}
 [hidden]{display:none!important}
-html{-webkit-text-size-adjust:100%;tab-size:4;line-height:1.5;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-body{background:#161617;min-height:100%;display:flex;flex-direction:column}
+html{height:100%;overflow:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%;tab-size:4;line-height:1.5;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{height:100%;overflow:hidden;overscroll-behavior:none;background:#161617;display:flex;flex-direction:column}
 pre{font-family:var(--font-mono,ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace);font-size:1em}
 canvas,img,svg{display:block;vertical-align:middle}
 .relative{position:relative}.absolute{position:absolute}.inset-0{inset:0}.hidden{display:none}
@@ -46,7 +46,7 @@ canvas,img,svg{display:block;vertical-align:middle}
 :root{--font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
 .art{position:absolute;inset:0;display:none;pointer-events:none;align-items:center;justify-content:flex-end;overflow:hidden;padding-right:4vw}
 @media(min-width:64rem){.art{display:flex}}
-.wrapper{height:var(--app-height,100dvh);width:100vw;display:flex;flex-direction:column;overflow:hidden;background:#161617;color:#c9c7cd;font-family:"Berkeley Mono","JetBrains Mono","JetBrains Mono Fallback"}
+.wrapper{height:var(--app-height,100dvh);width:100vw;display:flex;flex-direction:column;overflow:hidden;touch-action:manipulation;background:#161617;color:#c9c7cd;font-family:"Berkeley Mono","JetBrains Mono","JetBrains Mono Fallback"}
 .error{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--font-mono);font-size:.875rem;color:#9f9fa9}`;
 
 function html(art, cols) {

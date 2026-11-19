@@ -107,10 +107,9 @@ export function createBtop() {
       if (!msg || msg.cols == null || msg.rows == null) return;
       const cols = size(msg.cols, MAX_COLS, 100);
       const rows = size(msg.rows, MAX_ROWS, 30);
-      if (session.child && cols === session.cols && rows === session.rows) return;
-      const first = !session.child;
+      if (session.child) return;
       run(cols, rows);
-      if (first) control(ws, { type: "ready" });
+      control(ws, { type: "ready" });
     });
 
     ws.on("close", stop);

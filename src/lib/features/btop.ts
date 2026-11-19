@@ -10,7 +10,7 @@ function socketUrl() {
 
 export const btopCommand: Command = {
   name: "btop",
-  help: [["btop", "live system monitor (q to quit)"]],
+  help: [["btop", "live system monitor (q or double-tap to quit)"]],
   run(_args, { shell }) {
     const decoder = new TextDecoder();
     const encoder = new TextEncoder();
@@ -27,6 +27,7 @@ export const btopCommand: Command = {
 
     let socket: WebSocket;
     const mode: PassthroughMode = {
+      minCols: 80,
       onData(data) {
         if (closing || socket.readyState !== WebSocket.OPEN) return;
         if (data === "\x03") {

@@ -6,12 +6,14 @@ export interface TermLike {
   clear(): void;
   readonly cols: number;
   readonly rows: number;
+  setCompact?(on: boolean): void;
 }
 
 export interface PassthroughMode {
   onData(data: string): void;
   onResize?(cols: number, rows: number): void;
   exit(): void;
+  minCols?: number;
 }
 
 export type Ctx = { shell: Shell; signal: AbortSignal };
@@ -44,6 +46,7 @@ export class Shell {
   private typeahead: string[] = [];
   private mode: Mode | null = null;
   private passthrough: PassthroughMode | null = null;
+  private compact = false;
 
   private commands = new Map<string, Command>();
   private aliases = new Map<string, string[]>();
@@ -101,6 +104,7 @@ export class Shell {
     this.mode?.exit();
     this.passthrough?.exit();
     this.passthrough = null;
+    this.setCompact(false);
   }
 
   write(data: string) {
@@ -170,8 +174,15 @@ export class Shell {
     else if (!this.busy) this.render();
   }
 
+  private setCompact(on: boolean) {
+    if (this.compact === on) return;
+    this.compact = on;
+    this.term.setCompact?.(on);
+  }
+
   enterPassthrough(mode: PassthroughMode) {
     this.passthrough = mode;
+    if (mode.minCols && this.term.cols < mode.minCols) this.setCompact(true);
     this.line = "";
     this.cursor = 0;
     this.drawnPos = 0;
@@ -181,6 +192,7 @@ export class Shell {
   exitPassthrough() {
     if (!this.passthrough) return;
     this.passthrough = null;
+    this.setCompact(false);
     this.drawnPos = 0;
     this.render();
   }
@@ -392,6 +404,7 @@ export class Shell {
         "",
         dim(`shortcuts: ${aliases}`),
         dim("keys: tab complete, up/down history, left/right move, ctrl+a/e start/end, ctrl+u clear line, ctrl+l clear, ctrl+c cancel"),
+        dim("fullscreen apps: double-tap or two-finger tap to exit"),
       ].join("\n"),
     );
   }

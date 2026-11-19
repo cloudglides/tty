@@ -6,6 +6,7 @@ import { rsvpCommand } from "../lib/features/rsvp";
 import { Shell } from "../lib/shell";
 import { attachSoftKeyboard } from "../lib/soft-keyboard";
 import { attachTouchScroll } from "../lib/touch-scroll";
+import { attachPassthroughExit } from "../lib/touch-exit";
 import { FONT_FAMILY, FONT_SIZE, MELLOW } from "../lib/terminal-theme";
 import { TUIS } from "./tui-registry.generated";
 import { wasmTuiCommand } from "../lib/tui-runner";
@@ -27,8 +28,13 @@ function trackVisualViewport() {
   const vv = window.visualViewport;
   if (!vv) return () => {};
   const root = document.documentElement;
+  let last = 0;
   const update = () => {
-    root.style.setProperty("--app-height", `${vv.height}px`);
+    if (Math.abs(vv.scale - 1) > 0.01) return;
+    const height = Math.round(vv.height);
+    if (Math.abs(height - last) < 40) return;
+    last = height;
+    root.style.setProperty("--app-height", `${height}px`);
     window.scrollTo(0, 0);
   };
   vv.addEventListener("resize", update);
@@ -66,9 +72,24 @@ async function boot() {
     fit.fit();
     fit.observeResize();
 
+    let compact = false;
+    const setCompact = (on: boolean) => {
+      if (compact === on) return;
+      compact = on;
+      let size = on ? Math.max(5, Math.min(FONT_SIZE, container.clientWidth / 80 / 0.72)) : FONT_SIZE;
+      term.options.fontSize = size;
+      fit.fit();
+      for (let i = 0; i < 4 && on && term.cols < 80; i++) {
+        size = Math.max(5, size * (term.cols / 80) * 0.97);
+        term.options.fontSize = size;
+        fit.fit();
+      }
+    };
+
     const shell = new Shell({
       write: (data) => term.write(data),
       clear: () => term.clear(),
+      setCompact,
       get cols() {
         return term.cols;
       },
@@ -90,6 +111,7 @@ async function boot() {
     const resize = term.onResize(({ cols, rows }) => shell.resize(cols, rows));
     const detachKeyboard = term.textarea ? attachSoftKeyboard(term.textarea, (data) => shell.handleInput(data)) : () => {};
     const detachTouchScroll = attachTouchScroll(term, () => !shell.inPassthrough);
+    const detachExit = attachPassthroughExit(term.element ?? undefined, shell);
     const detachViewport = trackVisualViewport();
     shell.start();
     term.focus();
@@ -99,6 +121,7 @@ async function boot() {
       resize.dispose();
       detachKeyboard();
       detachTouchScroll();
+      detachExit();
       detachViewport();
       shell.dispose();
       fit.dispose();
