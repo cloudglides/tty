@@ -73,6 +73,11 @@ export class Shell {
       help: [["clear", "clear the screen"]],
       run: () => this.clear(),
     });
+    this.register({
+      name: "meow",
+      help: [["meow", ""]],
+      run: () => this.println("MEOWWW MEOWWW PURRRR NYAAAA :333"),
+    });
   }
 
   get inPassthrough() {
