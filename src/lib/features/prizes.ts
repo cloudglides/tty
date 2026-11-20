@@ -1,19 +1,25 @@
-import { bold, dim, red, yellow } from "../ansi";
+import { bold, dim, green, red, yellow } from "../ansi";
 import { imageToAnsi } from "../ansi-image";
 import { sanitize } from "../chat-types";
 import { PRIZES, type Prize } from "../prizes";
 import type { Command, Shell } from "../shell";
 
+const HOURS_WIDTH = Math.max(...PRIZES.map((prize) => prize.hours.length));
+
+function prizeLine(prize: Prize, n: number) {
+  return `  ${yellow(`[${n}]`.padEnd(4))} ${green(prize.hours.padEnd(HOURS_WIDTH))}  ${bold(prize.name)}`;
+}
+
 async function showPrize(shell: Shell, prize: Prize, n: number, width: number) {
   shell.println(await imageToAnsi(prize.image, width, 2));
-  shell.println(`  ${yellow(`[${n}]`)} ${bold(prize.name)}`);
+  shell.println(prizeLine(prize, n));
   shell.println(`      ${dim(prize.description)}`);
   shell.println();
 }
 
 export const prizesCommand: Command = {
   name: "prizes",
-  help: [["hc prizes [n]", "browse the prizes"]],
+  help: [["hc prizes [n]", "browse the prizes and their cost in hours"]],
   async run(args, { shell, signal }) {
     if (args[0]) {
       const n = Number(args[0]);
@@ -23,8 +29,9 @@ export const prizesCommand: Command = {
     }
     for (const [i, prize] of PRIZES.entries()) {
       if (signal.aborted) return;
-      shell.println(`  ${yellow(`[${i + 1}]`)} ${bold(prize.name)}`);
+      shell.println(prizeLine(prize, i + 1));
     }
+    shell.println(dim("1 hour = $5 of prize value"));
     shell.println(dim(`tip: ${yellow("hc prizes <n>")}${dim(" for a closer look")}`));
   },
 };
