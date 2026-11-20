@@ -13,6 +13,7 @@ const MAX_SESSIONS = 8;
 const MAX_COLS = 400;
 const MAX_ROWS = 150;
 const MAX_LIFETIME_MS = 15 * 60_000;
+const NONBLOCKING_STDIN = `-MPOSIX -MFcntl -e 'sysopen(my $tty, POSIX::ttyname(0), O_RDONLY | O_NONBLOCK | O_NOCTTY) or die "btop: $!"; POSIX::dup2(fileno($tty), 0) or die "btop: $!"; exec { $ARGV[0] } @ARGV or die "btop: $!"'`;
 
 function size(value, max, fallback) {
   const n = Number(value);
@@ -46,7 +47,7 @@ export function createBtop() {
       TERM: "xterm-256color",
       LANG: "C.UTF-8",
     };
-    const command = `stty rows ${rows} cols ${cols}; exec ${JSON.stringify(BTOP)} --force-utf`;
+    const command = `stty rows ${rows} cols ${cols}; exec perl ${NONBLOCKING_STDIN} ${JSON.stringify(BTOP)} --force-utf --update 1000`;
     const child = spawn("script", ["-qfec", command, "/dev/null"], {
       env,
       stdio: ["pipe", "pipe", "ignore"],
@@ -117,6 +118,13 @@ export function createBtop() {
     session.timer = setTimeout(() => ws.close(1000, "session timed out"), MAX_LIFETIME_MS);
     session.timer.unref();
   });
+
+  const shutdown = () => {
+    for (const session of sessions.values()) terminate(session.child);
+  };
+  process.once("SIGTERM", shutdown);
+  process.once("SIGINT", shutdown);
+  process.once("exit", shutdown);
 
   return {
     path: BTOP_PATH,

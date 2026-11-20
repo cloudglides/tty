@@ -18,9 +18,21 @@ export const btopCommand: Command = {
     let closing = false;
     let ready = false;
 
+    let pending = "";
+    let frame = 0;
+    const flush = () => {
+      if (!pending) return;
+      const text = pending;
+      pending = "";
+      shell.write(text);
+    };
+
     const leave = (message?: string) => {
       if (!active) return;
       active = false;
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0;
+      flush();
       shell.exitPassthrough();
       if (message) shell.println(message);
     };
@@ -84,7 +96,14 @@ export const btopCommand: Command = {
         }
         return;
       }
-      if (ready) shell.write(decoder.decode(event.data, { stream: true }));
+      if (!ready) return;
+      pending += decoder.decode(event.data, { stream: true });
+      if (!frame) {
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          flush();
+        });
+      }
     };
     socket.onerror = () => {
       if (!ready && !closing) {

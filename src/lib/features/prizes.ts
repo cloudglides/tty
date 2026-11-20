@@ -23,7 +23,7 @@ export const prizesCommand: Command = {
     }
     for (const [i, prize] of PRIZES.entries()) {
       if (signal.aborted) return;
-      await showPrize(shell, prize, i + 1, Math.min(36, shell.cols - 4));
+      shell.println(`  ${yellow(`[${i + 1}]`)} ${bold(prize.name)}`);
     }
     shell.println(dim(`tip: ${yellow("hc prizes <n>")}${dim(" for a closer look")}`));
   },
