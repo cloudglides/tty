@@ -2,7 +2,8 @@ import { error } from "./ansi";
 import type { Command, PassthroughMode } from "./shell";
 import type { TuiEntry } from "../client/tui-registry.generated";
 
-const WORKER_URL = "/workers/tui-host.js";
+declare const TUI_WORKER_URL: string;
+const WORKER_URL = TUI_WORKER_URL;
 
 type WorkerEvent =
   | { type: "ready"; cols: number; rows: number }

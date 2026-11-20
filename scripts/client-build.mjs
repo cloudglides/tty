@@ -90,7 +90,7 @@ canvas,img,svg{display:block;vertical-align:middle}
 .wrapper{height:var(--app-height,100dvh);width:100vw;display:flex;flex-direction:column;overflow:hidden;touch-action:manipulation;background:#161617;color:#c9c7cd;font-family:"Berkeley Mono","JetBrains Mono","JetBrains Mono Fallback"}
 .error{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--font-mono);font-size:.875rem;color:#9f9fa9}`;
 
-function html(art, cols, ghosttyChunk, iconVersion) {
+function html(art, cols, ghosttyChunk, iconVersion, appVersion) {
   return `<!DOCTYPE html>
 <html lang="en" class="h-full antialiased">
 <head>
@@ -102,7 +102,7 @@ function html(art, cols, ghosttyChunk, iconVersion) {
 <link rel="preload" href="/ghostty-vt.wasm" as="fetch" crossorigin>
 <link rel="preload" href="/fonts/jetbrains-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="modulepreload" href="/${ghosttyChunk}">
-<script type="module" src="/app.js"></script>
+<script type="module" src="/app.js?v=${appVersion}"></script>
 <style>${css}</style>
 </head>
 <body>
@@ -299,6 +299,20 @@ export async function buildClient() {
     .slice(0, 8);
   await buildGuides(iconVersion);
 
+  const worker = await build({
+    entryPoints: [workerEntry.pathname],
+    outdir: new URL("workers/", distDir).pathname,
+    entryNames: "tui-host-[hash]",
+    bundle: true,
+    format: "esm",
+    target: "es2022",
+    minify: true,
+    legalComments: "none",
+    metafile: true,
+  });
+  const workerPath = Object.keys(worker.metafile.outputs)[0];
+  const workerUrl = "/" + workerPath.slice(workerPath.indexOf("workers/"));
+
   const client = await build({
     entryPoints: [entry.pathname],
     outdir: distDir.pathname,
@@ -311,6 +325,7 @@ export async function buildClient() {
     minify: true,
     legalComments: "none",
     metafile: true,
+    define: { TUI_WORKER_URL: JSON.stringify(workerUrl) },
   });
   const chunkPath = Object.keys(client.metafile.outputs).find((name) =>
     /chunks\/ghostty-web-.*\.js$/.test(name),
@@ -318,15 +333,10 @@ export async function buildClient() {
   if (!chunkPath) throw new Error("ghostty chunk not found in client build");
   const ghosttyChunk = chunkPath.slice(chunkPath.indexOf("chunks/"));
 
-  await build({
-    entryPoints: [workerEntry.pathname],
-    outfile: new URL("workers/tui-host.js", distDir).pathname,
-    bundle: true,
-    format: "esm",
-    target: "es2022",
-    minify: true,
-    legalComments: "none",
-  });
+  const appVersion = createHash("sha256")
+    .update(await readFile(new URL("app.js", distDir)))
+    .digest("hex")
+    .slice(0, 8);
 
   await cp(publicDir, distDir, { recursive: true });
 
@@ -334,7 +344,7 @@ export async function buildClient() {
   const cols = Math.max(...art.split("\n").map((l) => l.length));
   await writeFile(
     new URL("index.html", distDir),
-    html(art, cols, ghosttyChunk, iconVersion),
+    html(art, cols, ghosttyChunk, iconVersion, appVersion),
   );
 
   for (const rel of await walk(distDir)) {
