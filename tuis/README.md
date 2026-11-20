@@ -24,7 +24,7 @@ tuis/my-app/
 - `name` must match the directory, be lowercase, and use only `a-z`, `0-9` and `-` (max 32 characters).
 - `summary` must be 1-80 printable ASCII characters.
 - `wasm` must be a `.wasm` file in the same directory, at most 2 MB.
-- Reserved names: `help`, `about`, `clear`, `auth`, `chat`, `prizes`, `rsvp`, `btop`, `login`, `logout`, `whoami`.
+- Reserved names: `help`, `about`, `clear`, `auth`, `chat`, `prizes`, `rsvp`, `login`, `logout`, `whoami`.
 
 The command is available as both `my-app` and `hc my-app`. Adding or changing a TUI triggers a rebuild in dev.
 

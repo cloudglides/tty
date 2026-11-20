@@ -1,4 +1,3 @@
-import { btopCommand } from "../lib/features/btop";
 import { lazyCommand } from "../lib/lazy-command";
 import { Shell } from "../lib/shell";
 import { attachSoftKeyboard } from "../lib/soft-keyboard";
@@ -106,7 +105,6 @@ async function boot() {
         async () => (await import("../lib/features/auth")).authCommand,
       ),
     );
-    shell.register(btopCommand);
     shell.register(
       lazyCommand("chat", [["hc chat", "talk with everyone here (needs login)"]], async () => (await import("../lib/features/chat")).chatCommand),
     );

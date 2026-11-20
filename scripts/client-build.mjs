@@ -42,7 +42,6 @@ const RESERVED = new Set([
   "chat",
   "prizes",
   "rsvp",
-  "btop",
   "login",
   "logout",
   "whoami",

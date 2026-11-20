@@ -24,7 +24,7 @@ Only one dev server can run per project directory. If one is already running, te
 - The font is self-hosted at `public/fonts/jetbrains-mono-latin.woff2`; `dist/index.html` declares its `@font-face` and the client waits for `document.fonts.load` before opening the terminal.
 - Postgres (`pg`) for RSVPs
 - Hack Club Auth (OIDC) for login, Slack Web API for channel invites
-- Two TUI lanes: contributed WASM binaries run in a Web Worker behind a fixed WASI-style ABI (no DOM, fetch or filesystem), and one curated native binary (`vendor/btop`) runs in a server-side PTY over `/api/btop` with a hard allowlist. Contributed code is never executed on the server.
+- Contributed TUIs are WASM binaries that run in a Web Worker behind a fixed WASI-style ABI (no DOM, fetch or filesystem). Contributed code is never executed on the server.
 
 ## Layout
 
@@ -37,10 +37,7 @@ server/rsvp-store.mjs         Postgres access for RSVPs
 server/auth-page.mjs          HTML for the login callback result page
 server/slack-invite.mjs       Slack channel invite helper
 server/chat.mjs               chat WebSocket server (auth, rate limits, broadcast)
-server/pty.mjs                curated native TUI PTY bridge (btop only, fixed argv)
 server/slack.mjs              Slack <-> chat bridge (draft, off unless SLACK_SYNC=on)
-vendor/btop                   vendored static musl btop binary (native lane)
-vendor/btop-LICENSE           btop license
 src/client/main.ts            vanilla client entry: boots ghostty-web, wires input to the shell, registers WASM TUIs
 src/client/tui-registry.generated.ts  generated list of contributed TUI commands
 src/workers/tui-host.ts       Web Worker host: WASI-style ABI, input buffering, output limits
@@ -89,9 +86,8 @@ Anything that needs the server goes through a route handler in `server.mjs` and 
 ### Running TUIs
 
 - Contributed TUIs live in `tuis/<name>/` and run in a Web Worker with a fixed WASI-style ABI. The server only serves their `.wasm` files as static assets. See `tuis/README.md` for the manifest format, ABI and limits.
-- `Shell.enterPassthrough` hands raw keys and resize events to a fullscreen TUI and suppresses the prompt; `exitPassthrough` restores it. Both `btop` and WASM TUIs use this. A mode can set `minCols`; on narrow screens the shell temporarily shrinks the terminal font so the TUI gets enough columns, then restores it on exit.
+- `Shell.enterPassthrough` hands raw keys and resize events to a fullscreen TUI and suppresses the prompt; `exitPassthrough` restores it. WASM TUIs use this. A mode can set `minCols`; on narrow screens the shell temporarily shrinks the terminal font so the TUI gets enough columns, then restores it on exit.
 - On touch screens, a double-tap or two-finger tap exits any fullscreen TUI (it sends ctrl-c). The wrapper uses `touch-action: manipulation` so the gesture does not trigger browser zoom.
-- `btop` is the only native lane: `server/pty.mjs` spawns the vendored static binary with fixed argv, caps sessions and lifetime, and kills the process group on disconnect. Never interpolate user input into the command line. Adding another native binary requires a reviewed code change, not just a file in `tuis/`.
 
 ## Auth and identity
 

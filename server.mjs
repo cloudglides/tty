@@ -4,7 +4,6 @@ import { fileURLToPath } from "node:url";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import path from "node:path";
 import { createChat } from "./server/chat.mjs";
-import { createBtop } from "./server/pty.mjs";
 import { buildClient } from "./scripts/client-build.mjs";
 import { authPage } from "./server/auth-page.mjs";
 import { baseUrl, html, json, origin, parseCookies, send, serializeCookie } from "./server/http.mjs";
@@ -245,13 +244,11 @@ const server = createServer((req, res) => {
 });
 
 const chat = createChat();
-const btop = createBtop();
 server.on("upgrade", (req, socket, head) => {
   socket.on("error", () => socket.destroy());
   try {
     const { pathname } = new URL(req.url ?? "/", "http://localhost");
     if (pathname === chat.path) return chat.handleUpgrade(req, socket, head);
-    if (pathname === btop.path) return btop.handleUpgrade(req, socket, head);
     socket.end("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
   } catch (err) {
     console.error("upgrade failed:", err);
