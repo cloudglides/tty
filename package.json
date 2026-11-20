@@ -18,6 +18,8 @@
   "devDependencies": {
     "@types/node": "^20",
     "esbuild": "^0.28.2",
+    "marked": "^18.2.1",
+    "shiki": "^4.6.0",
     "typescript": "^5",
     "wabt": "^1.0.39"
   }

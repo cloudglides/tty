@@ -131,17 +131,20 @@ export class Shell {
     return this.pendingRead?.prompt ?? this.mode?.prompt() ?? HOME_PROMPT;
   }
 
-  private eraseInput() {
+  private eraseSequence() {
     const rows = Math.floor(this.drawnPos / this.term.cols);
-    this.term.write((rows ? `\x1b[${rows}A` : "") + "\r\x1b[J");
+    return (rows ? `\x1b[${rows}A` : "") + "\r\x1b[J";
+  }
+
+  private eraseInput() {
+    this.term.write(this.eraseSequence());
     this.drawnPos = 0;
   }
 
   private render() {
-    this.eraseInput();
     const before = this.line.slice(0, this.cursor);
     const after = this.line.slice(this.cursor);
-    this.term.write(this.prompt + before + (after ? `\x1b7${after}\x1b8` : ""));
+    this.term.write(this.eraseSequence() + this.prompt + before + (after ? `\x1b7${after}\x1b8` : ""));
     this.drawnPos = visibleLength(this.prompt) + this.cursor;
   }
 

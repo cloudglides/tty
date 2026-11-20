@@ -19,7 +19,7 @@ Only one dev server can run per project directory. If one is already running, te
 ## Stack
 
 - Plain Node HTTP server, no framework. The client is one vanilla ESM bundle built with esbuild. TypeScript is used for the browser-facing source and compiled/bundled at build time; server code runs directly on Node.
-- `ghostty-web` 0.4 for the terminal (xterm.js compatible API). `scripts/patch-ghostty-web.mjs` runs on `postinstall`: it copies the engine to `public/ghostty-vt.wasm` (gitignored) and patches `ghostty-web/dist` to load it from there instead of a 560 KB base64 string inside the JS bundle. `dist/index.html` preloads that file. If the script fails after a `ghostty-web` upgrade, update its pattern.
+- `ghostty-web` 0.4 for the terminal (xterm.js compatible API). `scripts/patch-ghostty-web.mjs` runs on `postinstall`: it copies the engine to `public/ghostty-vt.wasm` (gitignored), patches `ghostty-web/dist` to load it from there instead of a 560 KB base64 string, and switches the loader to `WebAssembly.compileStreaming`. `dist/index.html` preloads that file. If the script fails after a `ghostty-web` upgrade, update its pattern.
 - `scripts/client-build.mjs` generates `dist/index.html` (inline CSS, ASCII art embedded) and bundles `src/client/main.ts` into `dist/app.js` plus a dynamically imported ghostty chunk. It copies `public/` into `dist/` and precompresses text assets to `.br` / `.gz`. The server picks the right encoding at request time.
 - The font is self-hosted at `public/fonts/jetbrains-mono-latin.woff2`; `dist/index.html` declares its `@font-face` and the client waits for `document.fonts.load` before opening the terminal.
 - Postgres (`pg`) for RSVPs
@@ -46,6 +46,7 @@ src/client/tui-registry.generated.ts  generated list of contributed TUI commands
 src/workers/tui-host.ts       Web Worker host: WASI-style ABI, input buffering, output limits
 src/lib/tui-runner.ts         browser-side launcher for contributed WASM TUIs
 src/lib/shell.ts              the shell: line editor, history, command dispatch, modes
+src/lib/lazy-command.ts       registers commands whose implementation loads on first use
 src/lib/features/*.ts         one file per command (auth, chat, prizes, rsvp)
 src/lib/soft-keyboard.ts      mobile keyboard input that ghostty-web drops
 src/lib/touch-scroll.ts       mobile touch-drag scrollback for the terminal
@@ -57,8 +58,10 @@ src/lib/chat-shared.mjs       sanitize + limits, shared by browser and server/
 src/lib/terminal-theme.ts     Mellow theme, font family and size (no framework imports)
 scripts/client-build.mjs      static HTML generation, esbuild bundles, TUI registry, precompression
 scripts/tui-build.mjs         compile WAT sources in tuis/ with wabt
+scripts/guide-pages.mjs       renders guides/*.mdx to static pages at /guides/<name> (marked + shiki)
 scripts/patch-ghostty-web.mjs postinstall: serve the wasm engine as a file
 tuis/                         contributed WASM TUIs, one directory per command (see tuis/README.md)
+guides/                       guides as .mdx with frontmatter (title, description) and images/; `hc guide <name>` opens the page
 public/ascii/ascii-art.txt    the background art
 public/fonts/                 self-hosted JetBrains Mono woff2
 public/prizes/                prize images
@@ -79,6 +82,8 @@ dist/                         generated on build, not committed
 2. Register it in `src/client/main.ts` with `shell.register(...)`. Add `shell.alias(...)` for shortcuts.
 3. Commands are reachable both as `<name>` and `hc <name>`.
 
+Rarely used commands can be registered with `lazyCommand` from `src/lib/lazy-command.ts` instead of a static import. It keeps the name and help text in the registration and imports the implementation on first run, so the initial bundle stays small.
+
 Anything that needs the server goes through a route handler in `server.mjs` and is called with `fetch` from the command.
 
 ### Running TUIs
@@ -90,7 +95,7 @@ Anything that needs the server goes through a route handler in `server.mjs` and 
 
 ## Auth and identity
 
-- Login is `hc auth login`: it asks for an email, opens a Hack Club Auth popup (`/api/auth/login`), and polls `/api/auth/me` until the callback sets the session.
+- Login is `hc auth login`: it opens a Hack Club Auth popup (`/api/auth/login`) directly and polls `/api/auth/me` until the callback sets the session.
 - Scopes are `openid profile slack_id`. Accounts without a linked Slack ID are refused, because identity is tied to Slack to prevent abuse.
 - The display name comes from cachet (`cachet.dunkirk.sh`) using the Slack ID, falling back to the profile name.
 - Sessions are an HMAC-signed cookie (`tty_session`, 30 days, httpOnly). Signing lives in `session-token.mjs` so `server/chat.mjs` can verify cookies on WebSocket upgrade.

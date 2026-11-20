@@ -1,15 +1,11 @@
-import { authCommand } from "../lib/features/auth";
 import { btopCommand } from "../lib/features/btop";
-import { chatCommand } from "../lib/features/chat";
-import { prizesCommand } from "../lib/features/prizes";
-import { rsvpCommand } from "../lib/features/rsvp";
+import { lazyCommand } from "../lib/lazy-command";
 import { Shell } from "../lib/shell";
 import { attachSoftKeyboard } from "../lib/soft-keyboard";
 import { attachTouchScroll } from "../lib/touch-scroll";
 import { attachPassthroughExit } from "../lib/touch-exit";
 import { FONT_FAMILY, FONT_SIZE, MELLOW } from "../lib/terminal-theme";
 import { TUIS } from "./tui-registry.generated";
-import { wasmTuiCommand } from "../lib/tui-runner";
 
 function makeBackgroundTransparent(container: HTMLElement) {
   const canvas = container.querySelector("canvas");
@@ -69,6 +65,8 @@ async function boot() {
     term.loadAddon(fit);
     term.open(container);
     makeBackgroundTransparent(container);
+    const renderer = (term as unknown as { renderer?: { devicePixelRatio?: number } }).renderer;
+    if (renderer && (renderer.devicePixelRatio ?? 1) > 2) renderer.devicePixelRatio = 2;
     fit.fit();
     fit.observeResize();
 
@@ -97,15 +95,39 @@ async function boot() {
         return term.rows;
       },
     });
-    shell.register(authCommand);
+    shell.register(
+      lazyCommand(
+        "auth",
+        [
+          ["hc auth login", "log in with Hack Club Auth"],
+          ["hc auth status", "who you're logged in as"],
+          ["hc auth logout", "log out"],
+        ],
+        async () => (await import("../lib/features/auth")).authCommand,
+      ),
+    );
     shell.register(btopCommand);
-    shell.register(chatCommand);
-    shell.register(prizesCommand);
-    shell.register(rsvpCommand);
-    for (const tui of TUIS) shell.register(wasmTuiCommand(tui));
+    shell.register(
+      lazyCommand("chat", [["hc chat", "talk with everyone here (needs login)"]], async () => (await import("../lib/features/chat")).chatCommand),
+    );
+    shell.register(
+      lazyCommand("prizes", [["hc prizes [n]", "browse the prizes"]], async () => (await import("../lib/features/prizes")).prizesCommand),
+    );
+    shell.register(
+      lazyCommand("rsvp", [["hc rsvp", "RSVP and join #tty on Slack (needs login)"]], async () => (await import("../lib/features/rsvp")).rsvpCommand),
+    );
+    shell.register(
+      lazyCommand("guide", [["hc guide [name]", "open the guides in your browser"]], async () => (await import("../lib/features/guide")).guideCommand),
+    );
+    for (const tui of TUIS) {
+      shell.register(
+        lazyCommand(tui.name, [[tui.name, tui.summary]], async () => (await import("../lib/tui-runner")).wasmTuiCommand(tui)),
+      );
+    }
     shell.alias("login", ["auth", "login"]);
     shell.alias("logout", ["auth", "logout"]);
     shell.alias("whoami", ["auth", "status"]);
+    shell.alias("guides", ["guide"]);
 
     const sub = term.onData((data: string) => shell.handleInput(data));
     const resize = term.onResize(({ cols, rows }) => shell.resize(cols, rows));

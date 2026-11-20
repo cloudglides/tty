@@ -18,7 +18,6 @@ const dist = fileURLToPath(new URL("./dist/", import.meta.url));
 const port = Number(process.env.PORT ?? 3000);
 const dev = process.env.NODE_ENV !== "production";
 const secure = process.env.NODE_ENV === "production";
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_NAME = 32;
 
 if (dev || !existsSync(path.join(dist, "index.html"))) await buildClient();
@@ -47,7 +46,8 @@ async function serveStatic(req, res, pathname) {
   } catch {
     return send(res, 400, "bad request\n", { "content-type": "text/plain" });
   }
-  if (rel === "/" || rel === "") rel = "/index.html";
+  if (rel === "" || rel.endsWith("/")) rel += "index.html";
+  else if (!path.extname(rel)) rel += existsSync(path.join(dist, rel)) ? "/index.html" : ".html";
   if (rel.includes("\0")) return send(res, 400, "bad request\n", { "content-type": "text/plain" });
 
   const filePath = path.resolve(dist, "." + rel);
@@ -79,9 +79,13 @@ async function serveStatic(req, res, pathname) {
     "content-length": encoding ? statSync(file).size : stat.size,
     "cache-control": dev
       ? "no-store"
-      : /\.(html|js|wasm)$/.test(filePath)
-        ? "no-cache"
-        : "public, max-age=31536000, immutable",
+      : pathname.startsWith("/chunks/")
+        ? "public, max-age=31536000, immutable"
+        : ext === ".wasm"
+          ? "public, max-age=0, stale-while-revalidate=31536000"
+          : /\.(html|js)$/.test(filePath) || pathname === "/ico.png"
+            ? "no-cache"
+            : "public, max-age=31536000, immutable",
     etag,
   };
   if (encoding) {
@@ -114,12 +118,6 @@ function login(req, res, url) {
   target.searchParams.set("response_type", "code");
   target.searchParams.set("scope", SCOPES);
   target.searchParams.set("state", state);
-
-  const email = url.searchParams.get("email")?.trim();
-  if (email && EMAIL_RE.test(email)) {
-    target.searchParams.set("email", email);
-    target.searchParams.set("login_hint", email);
-  }
 
   send(res, 307, "", {
     location: target.toString(),
@@ -260,13 +258,30 @@ server.on("upgrade", (req, socket, head) => {
 
 if (dev) {
   let timer;
-  for (const dir of ["src", "public", "scripts", "tuis"]) {
+  let running = false;
+  let pending = false;
+  const rebuild = async () => {
+    if (running) {
+      pending = true;
+      return;
+    }
+    running = true;
+    do {
+      pending = false;
+      try {
+        await buildClient();
+        console.log("client rebuilt");
+      } catch (err) {
+        console.error("client rebuild failed:", err);
+      }
+    } while (pending);
+    running = false;
+  };
+  for (const dir of ["src", "public", "scripts", "tuis", "guides"]) {
     try {
       watch(new URL(`./${dir}/`, import.meta.url), { recursive: true }, () => {
         clearTimeout(timer);
-        timer = setTimeout(() => {
-          buildClient().then(() => console.log("client rebuilt")).catch((err) => console.error("client rebuild failed:", err));
-        }, 80);
+        timer = setTimeout(rebuild, 80);
       });
     } catch {
       console.error(`dev watch unavailable for ${dir}`);

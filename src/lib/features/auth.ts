@@ -3,7 +3,6 @@ import type { Command, Ctx } from "../shell";
 
 export type User = { name: string; slackId: string };
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const POLL_MS = 1000;
 const LOGIN_TIMEOUT_MS = 10 * 60_000;
 const CLOSED_GRACE_MS = 3000;
@@ -36,11 +35,7 @@ async function login({ shell, signal }: Ctx) {
   }
 
   shell.println(`logging in with ${bold("Hack Club Auth")}`);
-  const email = await shell.readLine(`${cyan("?")} enter your email: `);
-  if (email === null) return;
-  if (!EMAIL_RE.test(email)) return shell.println(error("that does not look like an email address"));
-
-  const url = new URL(`/api/auth/login?email=${encodeURIComponent(email)}`, location.origin).href;
+  const url = new URL("/api/auth/login", location.origin).href;
   const popup = window.open(url, "hca-login", "popup,width=520,height=760");
   if (popup) shell.println(`${dim("opening your browser... (did not open? ")}${link(url, "click here")}${dim(")")}`);
   else shell.println(`open this link to log in: ${link(url)}`);
